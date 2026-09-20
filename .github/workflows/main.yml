@@ -1,5 +1,5 @@
 name: Remote Desktop
-run-name: ${{ inputs.os }}
+run-name: \${{ inputs.os }}
 
 defaults:
   run:
@@ -31,10 +31,10 @@ on:
 jobs:
   job:
     name: URL
-    runs-on: ${{ inputs.os }}
+    runs-on: \${{ inputs.os }}
 
     environment:
-      name: ${{ github.run_id }}
+      name: \${{ github.run_id }}
 
     permissions:
       contents: read
@@ -42,7 +42,7 @@ jobs:
 
     env:
       PORT: 8080
-      GITHUB_TOKEN: ${{ github.token }}
+      GITHUB_TOKEN: \${{ github.token }}
 
     steps:
       - name: Start tunnel
@@ -50,13 +50,13 @@ jobs:
         env:
           METRICS_URL: "localhost:8081"
         run: |
-          case "$RUNNER_OS" in
+          case "\$RUNNER_OS" in
             Windows)
               CLOUDFLARED=./cloudflared.exe
 
               curl -fsSL \
                 "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe" \
-                -o "${CLOUDFLARED}"
+                -o "\${CLOUDFLARED}"
               ;;
 
             Linux)
@@ -64,7 +64,7 @@ jobs:
 
               curl -fsSL \
                 "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64" \
-                -o "${CLOUDFLARED}"
+                -o "\${CLOUDFLARED}"
               ;;
 
             macOS)
@@ -76,20 +76,20 @@ jobs:
               ;;
           esac
 
-          chmod +x "${CLOUDFLARED}"
+          chmod +x "\${CLOUDFLARED}"
 
-          "${CLOUDFLARED}" tunnel \
-            --metrics="${METRICS_URL}" \
-            --url "http://localhost:${PORT}" &
+          "\${CLOUDFLARED}" tunnel \
+            --metrics="\${METRICS_URL}" \
+            --url "http://localhost:\${PORT}" &
 
-          until JSON="$(curl -sS "${METRICS_URL}/quicktunnel")"; do
+          until JSON="(curl -sS "{METRICS_URL}/quicktunnel")"; do
             sleep 0.1
           done
 
-          HOSTNAME="$(jq -r '.hostname' <<< "${JSON}")"
-          TUNNEL_URL="https://${HOSTNAME}"
+          HOSTNAME="(jq -r '.hostname' <<< "{JSON}")"
+          TUNNEL_URL="https://\${HOSTNAME}"
 
-          echo "url=${TUNNEL_URL}" >> "$GITHUB_OUTPUT"
+          echo "url=\({TUNNEL_URL}" >> "\)GITHUB_OUTPUT"
 
       - name: Setup Ubuntu desktop and audio
         if: runner.os == 'Linux'
@@ -116,14 +116,14 @@ jobs:
               -nolisten tcp
           )
 
-          export DISPLAY=":$DISPLAY_NUMBER"
-          export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+          export DISPLAY=":\$DISPLAY_NUMBER"
+          export XDG_RUNTIME_DIR="/run/user/\$(id -u)"
 
-          mkdir -p "$XDG_RUNTIME_DIR"
-          chmod 700 "$XDG_RUNTIME_DIR"
+          mkdir -p "\$XDG_RUNTIME_DIR"
+          chmod 700 "\$XDG_RUNTIME_DIR"
 
-          echo "DISPLAY=$DISPLAY" >> "$GITHUB_ENV"
-          echo "XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR" >> "$GITHUB_ENV"
+          echo "DISPLAY=DISPLAY" >> "GITHUB_ENV"
+          echo "XDG_RUNTIME_DIR=\(XDG_RUNTIME_DIR" >> "\)GITHUB_ENV"
 
           pulseaudio --start --exit-idle-time=-1
 
@@ -150,37 +150,37 @@ jobs:
         run: |
           Invoke-WebRequest `
             https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip `
-            -OutFile "$env:RUNNER_TEMP\VBCABLE.zip"
+            -OutFile "\$env:RUNNER_TEMP\VBCABLE.zip"
 
           Expand-Archive `
             "$env:RUNNER_TEMP\VBCABLE.zip" `
-            -DestinationPath "$env:RUNNER_TEMP\VBCABLE"
+            -DestinationPath "\$env:RUNNER_TEMP\VBCABLE"
 
-          & "$env:RUNNER_TEMP\VBCABLE\VBCABLE_Setup_x64.exe" -i -h
+          & "\$env:RUNNER_TEMP\VBCABLE\VBCABLE_Setup_x64.exe" -i -h
 
           Start-Service audiosrv
 
-          Install-Module AudioDeviceCmdlets -Force -Confirm:$false
+          Install-Module AudioDeviceCmdlets -Force -Confirm:\$false
           Import-Module AudioDeviceCmdlets
 
-          $cable = Get-AudioDevice -List |
-            Where-Object { $_.Name -like "CABLE Input*" } |
+          \$cable = Get-AudioDevice -List |
+            Where-Object { \$_.Name -like "CABLE Input*" } |
             Select-Object -First 1
 
-          if (-not $cable) {
+          if (-not \$cable) {
             Get-AudioDevice -List | Format-Table -AutoSize
             throw "VB-CABLE playback device not found"
           }
 
-          Set-AudioDevice -Index $cable.Index
+          Set-AudioDevice -Index \$cable.Index
 
           Get-AudioDevice -Playback
 
       - name: Resolve latest release tag
         id: release
         run: |
-          TAG="$(gh release view \
-            --repo "$GITHUB_REPOSITORY" \
+          TAG="\$(gh release view \
+            --repo "\$GITHUB_REPOSITORY" \
             --json tagName \
             --jq .tagName 2>/dev/null \
           || gh release view \
@@ -188,53 +188,61 @@ jobs:
             --json tagName \
             --jq .tagName)"
 
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "tag=TAG" >> "GITHUB_OUTPUT"
 
       - name: Install Electron binary
         env:
-          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          RELEASE_TAG: \${{ steps.release.outputs.tag }}
         run: |
-          VERSION="${RELEASE_TAG#v}"
+          VERSION="\${RELEASE_TAG#v}"
 
-          case "$RUNNER_OS" in
+          case "\$RUNNER_OS" in
             Linux)
-              ZIP_NAME="os-in-browser-linux-x64-${VERSION}.zip"
+              ZIP_NAME="os-in-browser-linux-x64-\${VERSION}.zip"
               ;;
 
             Windows)
-              ZIP_NAME="os-in-browser-win32-x64-${VERSION}.zip"
+              ZIP_NAME="os-in-browser-win32-x64-\${VERSION}.zip"
               ;;
 
             macOS)
-              ZIP_NAME="os-in-browser-darwin-arm64-${VERSION}.zip"
+              ZIP_NAME="os-in-browser-darwin-arm64-\${VERSION}.zip"
               ;;
           esac
 
-          gh release download "$RELEASE_TAG" \
-            --repo "$GITHUB_REPOSITORY" \
-            --pattern "$ZIP_NAME" \
-          || gh release download "$RELEASE_TAG" \
+          gh release download "\$RELEASE_TAG" \
+            --repo "\$GITHUB_REPOSITORY" \
+            --pattern "\$ZIP_NAME" \
+          || gh release download "\$RELEASE_TAG" \
             --repo "kingdudely/os-in-browser" \
-            --pattern "$ZIP_NAME"
+            --pattern "\$ZIP_NAME"
 
-          unzip -q "$ZIP_NAME" || {
-            status=$?
-            if [ "$status" -ne 1 ]; then
-              exit "$status"
+          unzip -q "\$ZIP_NAME" || {
+            status=\$?
+            if [ "\$status" -ne 1 ]; then
+              exit "\$status"
             fi
           }
 
       - name: Run remote desktop
         env:
-          TUNNEL_URL: ${{ steps.tunnel.outputs.url }}
+          TUNNEL_URL: \${{ steps.tunnel.outputs.url }}
         run: |
-          export USERNAME=$(jq -r '.inputs.username // ""' "$GITHUB_EVENT_PATH")
-          echo "::add-mask::${USERNAME}"
+          export USERNAME=(jq -r '.inputs.username // ""' "GITHUB_EVENT_PATH")
+          echo "::add-mask::\${USERNAME}"
 
-          export PASSWORD=$(jq -r '.inputs.password // ""' "$GITHUB_EVENT_PATH")
-          echo "::add-mask::${PASSWORD}"
+          export PASSWORD=(jq -r '.inputs.password // ""' "GITHUB_EVENT_PATH")
+          echo "::add-mask::\${PASSWORD}"
 
-          case "$RUNNER_OS" in
+          # TỰ ĐỘNG RESET MẬT KHẨU TÀI KHOẢN TRÊN MACOS SANG PASSWORD BẠN ĐÃ NHẬP
+          if [ "\$RUNNER_OS" = "macOS" ]; then
+            echo "🔧 Đang cấu hình lại mật khẩu quản trị cho macOS..."
+            sudo dscl . -passwd /Users/Anka "\$PASSWORD" || true
+            sudo dscl . -passwd /Users/anka "\$PASSWORD" || true
+            sudo dscl . -passwd /Users/runner "\$PASSWORD" || true
+          fi
+
+          case "\$RUNNER_OS" in
             Linux)
               sudo chown root:root ./os-in-browser-linux-x64/chrome-sandbox
               sudo chmod 4755 ./os-in-browser-linux-x64/chrome-sandbox
