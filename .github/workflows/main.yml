@@ -12,7 +12,7 @@ on:
         description: Operating system
         type: choice
         required: true
-        default: windows-latest
+        default: macos-latest
         options:
           - windows-latest
           - ubuntu-latest
